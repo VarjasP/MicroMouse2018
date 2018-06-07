@@ -205,7 +205,7 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
   }
-	if(1) // 0 - doesn't write to flash // 1 - writes to flash
+	if(0) // 0 - doesn't write to flash // 1 - writes to flash
 	{
 	/* Unlock the Flash to enable the flash control register access *************/
   HAL_FLASH_Unlock();
