@@ -1,0 +1,28 @@
+--cpu=Cortex-M4.fp --branchpatch=sdcomp-29491-629360
+"micromouse2018\startup_stm32l432xx.o"
+"micromouse2018\main.o"
+"micromouse2018\stm32l4xx_hal_msp.o"
+"micromouse2018\stm32l4xx_it.o"
+"micromouse2018\system_stm32l4xx.o"
+"micromouse2018\stm32l4xx_hal_dma_ex.o"
+"micromouse2018\stm32l4xx_hal_adc_ex.o"
+"micromouse2018\stm32l4xx_hal_pwr.o"
+"micromouse2018\stm32l4xx_hal_adc.o"
+"micromouse2018\stm32l4xx_hal_flash_ex.o"
+"micromouse2018\stm32l4xx_hal_i2c.o"
+"micromouse2018\stm32l4xx_hal_i2c_ex.o"
+"micromouse2018\stm32l4xx_hal_tim.o"
+"micromouse2018\stm32l4xx_hal.o"
+"micromouse2018\stm32l4xx_hal_flash.o"
+"micromouse2018\stm32l4xx_hal_cortex.o"
+"micromouse2018\stm32l4xx_hal_tim_ex.o"
+"micromouse2018\stm32l4xx_hal_flash_ramfunc.o"
+"micromouse2018\stm32l4xx_hal_gpio.o"
+"micromouse2018\stm32l4xx_hal_rcc.o"
+"micromouse2018\stm32l4xx_hal_dma.o"
+"micromouse2018\stm32l4xx_hal_rcc_ex.o"
+"micromouse2018\stm32l4xx_hal_pwr_ex.o"
+--library_type=microlib --strict --scatter "MicroMouse2018\MicroMouse2018.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "MicroMouse2018.map" -o MicroMouse2018\MicroMouse2018.axf
