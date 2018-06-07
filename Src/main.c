@@ -58,11 +58,17 @@ TIM_HandleTypeDef htim16;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 int adcValue[5];
-uint32_t TIM_IT_Counter=0;
+uint32_t time=0;
 
 uint32_t indX = 0;
-int16_t data_readed[2048];
+int64_t data_readed[256];
 int enc1=0,enc2 =0;
+
+uint8_t irjflashre = 0;
+uint8_t userButtonCounter = 0;
+uint32_t lastChangeTime = 0;
+uint16_t userButtonGesture = 0;
+uint8_t lastState = 0; //0 = nincs lenyomva, 1 = lenyomva
 
 uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0;
 uint32_t Address = 0, PAGEError = 0, MemoryProgramStatus = 0;
@@ -90,6 +96,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* Private function prototypes -----------------------------------------------*/
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
+void UserButtonHandler(int button_state);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -146,16 +153,17 @@ int main(void)
 //	data[0]=0x3B;
 //	HAL_I2C_Master_Transmit(&hi2c1, 0xD0, data, 1, 10);
 	
-	//EnCODER
-	HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_Encoder_Start_IT(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1);
+	
+	//ENCODER
+//	HAL_TIM_Encoder_Start_IT(&htim1, TIM_CHANNEL_1);
+//	HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_1);
+//	HAL_TIM_Encoder_Start_IT(&htim2, TIM_CHANNEL_1);
+//	HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1);
 	
 	//Timer interrupt
 	HAL_TIM_Base_Start_IT(&htim7);
 	//set data
-	for(int i=0;i< FLASH_PAGE_SIZE;i++){
+	for(int i=0;i< 256;i++){
 		data_readed[i]=0;
 	}
 	
@@ -176,14 +184,18 @@ int main(void)
   while (1)
   {
 		
-		//if(adcValue[4] < 10) break;
-		enc1=TIM1->CNT;
-		//data_readed[indX++] = enc1;
-		enc2=TIM2->CNT;
-		//data_readed[indX++] = enc2;
-		HAL_Delay(1);
-		if(enc1 != 0 || enc2 != 0)
-			HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET);
+		if(irjflashre == 1) break;
+		HAL_Delay(100);
+		
+		//ENCODER
+//		//if(adcValue[4] < 10) break;
+//		enc1=TIM1->CNT;
+//		//data_readed[indX++] = enc1;
+//		enc2=TIM2->CNT;
+//		//data_readed[indX++] = enc2;
+//		HAL_Delay(1);
+//		if(enc1 != 0 || enc2 != 0)
+//			HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET);
 		
 		//GYRO
 //	data[0]=0x3B;
@@ -205,7 +217,7 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
   }
-	if(0) // 0 - doesn't write to flash // 1 - writes to flash
+	if(1) // 0 - doesn't write to flash // 1 - writes to flash
 	{
 	/* Unlock the Flash to enable the flash control register access *************/
   HAL_FLASH_Unlock();
@@ -255,7 +267,7 @@ int main(void)
   Address = FLASH_USER_START_ADDR;
 
 	indX = 0;
-  while (Address < FLASH_USER_END_ADDR && indX < 400)
+  while (Address < FLASH_USER_END_ADDR && indX < 256)
   {
 		//uint64_t data = (data_readed[indX+3]<<48) + (data_readed[indX+2]<<32) + (data_readed[indX+1]<<16) + data_readed[indX];
     if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, Address, data_readed[indX]) == HAL_OK)
@@ -788,6 +800,54 @@ static uint32_t GetPage(uint32_t Addr)
 static uint32_t GetBank(uint32_t Addr)
 {
   return FLASH_BANK_1;
+}
+
+/**
+  * @brief  Felismeri a gombbal lenyomott mintákat
+  * @param  userButton: a gombra kötött pin ADC értéke, GND = gomb lenyomva
+  */
+void UserButtonHandler(int userButton){
+	if(time - lastChangeTime > 50) //DEBOUNCE
+	{
+	if(userButton < 10 && lastState ==0){
+		lastState = 1;
+		lastChangeTime = time;
+	}
+		
+	else if(userButton > 500 && lastState ==1){
+		lastState = 0;
+		//data_readed[indX++] = time - lastChangeTime; //DEBUG
+		if(time - lastChangeTime < 500) userButtonGesture += 2* (1 << userButtonCounter++); //rövid
+		else if(time - lastChangeTime >= 500) userButtonGesture += 3* (1 << userButtonCounter++); //hosszú
+		lastChangeTime = time;
+	}
+	
+	else if (userButtonGesture != 0 && userButton > 500 && time - lastChangeTime > 1000){
+		//data_readed[indX++] = 666; //DEBUG
+			switch(userButtonGesture){
+				case 2: //rövid
+					break;
+				case 3: //hosszú
+					break;
+				case 6: //rövid-rövid
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
+					break;
+				case 7: //hosszú-rövid
+					break;
+				case 8: //rövid-hosszú
+					break;
+				case 9: //hosszú-hosszú
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
+					break;
+				case 21: //hosszú-hosszú-hosszú
+					irjflashre = 1;
+					break;
+			}
+		userButtonGesture = 0;
+		userButtonCounter = 0;
+	}
+	}
+	
 }
 /* USER CODE END 4 */
 

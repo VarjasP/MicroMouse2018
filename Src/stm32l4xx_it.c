@@ -36,11 +36,12 @@
 #include "stm32l4xx_it.h"
 
 /* USER CODE BEGIN 0 */
-extern uint32_t TIM_IT_Counter;
+extern uint32_t time;
 extern ADC_HandleTypeDef hadc1;
 extern int adcValue[5];
 extern uint32_t indX;
 extern uint8_t data_readed[2048];
+extern void UserButtonHandler(int userButton);
 
 void readADC(ADC_HandleTypeDef* hadc,int* readTo, int times);
 /* USER CODE END 0 */
@@ -110,9 +111,12 @@ void TIM7_IRQHandler(void)
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
-	++TIM_IT_Counter;
+	++time;
+	
 	//READ ADC
 	readADC(&hadc1,adcValue,5);
+	
+	UserButtonHandler(adcValue[4]);
 	
 	//STORES TO RAM
 	/*if(indX<400 && TIM_IT_Counter % 2000 ==0){
