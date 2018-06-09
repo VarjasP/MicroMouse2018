@@ -40,6 +40,7 @@
 #include "stm32l4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+#include "dwt_stm32_delay.h"
 #define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_16   /* Start @ of user Flash area */
 #define FLASH_USER_END_ADDR     ADDR_FLASH_PAGE_16 + FLASH_PAGE_SIZE - 1   /* End @ of user Flash area */
 /* USER CODE END Includes */
@@ -63,6 +64,8 @@ uint32_t time=0;
 uint32_t indX = 0;
 int64_t data_readed[256];
 int enc1=0,enc2 =0;
+
+int fotoValue[4];
 
 uint8_t irjflashre = 0;
 uint8_t userButtonCounter = 0;
@@ -97,12 +100,181 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 static uint32_t GetPage(uint32_t Address);
 static uint32_t GetBank(uint32_t Address);
 void UserButtonHandler(int button_state);
+void beep(int note, int duration);
+int ReadFoto(int pin);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-uint8_t data[1];
+uint8_t data[2];
 uint8_t buffer[14];
 int16_t value[7];
+int i=0;
+int fotoindex=0;
+
+//star wars start
+const int c = (int)1000000/261; //261Hz
+const int d = (int)1000000/294;  //294Hz
+const int e = (int)1000000/329; //329Hz
+const int f = (int)1000000/349; //349Hz
+const int g = (int)1000000/391; //391Hz
+const int gS = (int)1000000/415; //415Hz
+const int a = (int)1000000/440; //440Hz
+const int aS = (int)1000000/455; //455Hz
+const int b = (int)1000000/466; //466Hz
+const int cH = (int)1000000/523; //523Hz
+const int cSH = (int)1000000/554; //554Hz
+const int dH = (int)1000000/587; //587Hz
+const int dSH = (int)1000000/622; //622Hz
+const int eH = (int)1000000/659; //659Hz
+const int fH = (int)1000000/698; //698Hz
+const int fSH = (int)1000000/740; //740Hz
+const int gH = (int)1000000/784; //784Hz
+const int gSH = (int)1000000/830; //830Hz
+const int aH = (int)1000000/880; //880Hz
+
+void firstSection()
+{
+  beep(a, 500);
+  beep(a, 500);    
+  beep(a, 500);
+  beep(f, 350);
+  beep(cH, 150);  
+  beep(a, 500);
+  beep(f, 350);
+  beep(cH, 150);
+  beep(a, 650);
+ 
+  HAL_Delay(500);
+ 
+  beep(eH, 500);
+  beep(eH, 500);
+  beep(eH, 500);  
+  beep(fH, 350);
+  beep(cH, 150);
+  beep(gS, 500);
+  beep(f, 350);
+  beep(cH, 150);
+  beep(a, 650);
+ 
+  HAL_Delay(500);
+}
+ 
+void secondSection()
+{
+  beep(aH, 500);
+  beep(a, 300);
+  beep(a, 150);
+  beep(aH, 500);
+  beep(gSH, 325);
+  beep(gH, 175);
+  beep(fSH, 125);
+  beep(fH, 125);    
+  beep(fSH, 250);
+ 
+  HAL_Delay(325);
+ 
+  beep(aS, 250);
+  beep(dSH, 500);
+  beep(dH, 325);  
+  beep(cSH, 175);  
+  beep(cH, 125);  
+  beep(b, 125);  
+  beep(cH, 250);  
+ 
+  HAL_Delay(350);
+}
+//star wars end
+
+void ok()
+{
+for (int i=1000; i<2000; i=i*1.02) beep(500000/i,10);  
+for (int i=2000; i>1000; i=i*.98) beep(500000/i,10);
+for (int i=1000; i<2000; i=i*1.02) beep(500000/i,10); 
+}
+
+
+void ohno()
+{
+for (int i=1000; i<1244; i=i*1.01)  beep(1000000/i,30);
+for (int i=1244; i>1000; i=i*.99)beep(1000000/i,30);
+}
+	
+void beep1()
+{
+	beep(b,100);
+	HAL_Delay(50);
+	beep(a,100);
+	HAL_Delay(50);
+	beep(g,100);
+	HAL_Delay(50);
+	beep(f,100);
+	HAL_Delay(50);
+	beep(e,100);
+	HAL_Delay(50);
+	beep(d,100);
+	HAL_Delay(50);
+	beep(c,100);
+	HAL_Delay(50);
+}
+
+void beep2()
+{
+	beep(c,200);
+	HAL_Delay(100);
+	beep(d,200);
+	HAL_Delay(100);
+	beep(e,200);
+	HAL_Delay(100);
+	beep(f,200);
+	HAL_Delay(100);
+	beep(g,200);
+	HAL_Delay(100);
+	beep(a,200);
+	HAL_Delay(100);
+	beep(b,200);
+	HAL_Delay(100);
+}
+
+void beep3()
+{
+	beep(cH,200);
+	HAL_Delay(100);
+	beep(dH,200);
+	HAL_Delay(100);
+	beep(eH,200);
+	HAL_Delay(100);
+	beep(fH,200);
+	HAL_Delay(100);
+	beep(gH,200);
+	HAL_Delay(100);
+	beep(aH,200);
+	HAL_Delay(100);
+}
+
+void beep4()
+{
+	beep(500,50);
+	HAL_Delay(100);
+	beep(500,50);
+	HAL_Delay(100);
+	beep(500,50);
+	HAL_Delay(100);
+	
+	beep(500,200);
+	HAL_Delay(100);
+	beep(500,200);
+	HAL_Delay(100);
+	beep(500,200);
+	HAL_Delay(100);
+	
+	beep(500,50);
+	HAL_Delay(100);
+	beep(500,50);
+	HAL_Delay(100);
+	beep(500,50);
+	HAL_Delay(100);
+}
+	
 /* USER CODE END 0 */
 
 /**
@@ -142,16 +314,26 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-	//GYRO
+	//microsec
+	DWT_Delay_Init ();
+	
+	//BUZZER
+	HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+	TIM16->CCR1=0;
+//	TIM16->PSC=100;
+	
+//	//GYRO
 //	if(HAL_I2C_IsDeviceReady(&hi2c1, 0xD0, 2, 10) == HAL_OK)
 //	{
-//		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
+//		ok();
 //	}
-//	HAL_Delay(3000);
+//	else{beep4(); HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);}
+//	HAL_Delay(300);
 //	
 //	//Transmit via I2C
-//	data[0]=0x3B;
-//	HAL_I2C_Master_Transmit(&hi2c1, 0xD0, data, 1, 10);
+//	data[0]=0x6B;
+//	data[1]=0x00;
+//	HAL_I2C_Master_Transmit(&hi2c1, 0xD0, data, 2, 10);
 	
 	
 	//ENCODER
@@ -166,8 +348,15 @@ int main(void)
 	for(int i=0;i< 256;i++){
 		data_readed[i]=0;
 	}
+		for(int i=0;i< 4;i++){
+		fotoValue[i]=0;
+	}
 	
-	data_readed[indX++] = 62;
+	/*data_readed[indX++] = 62;
+	for(int i=0;i< 256;i++){
+		if(i%2 == 0) data_readed[i]=i/2;
+		else data_readed[i] = i*501;
+	}*/
 		/*for(int  i =0; i<400;i++)
 		data_readed[indX++] = i*1000+1;*/
 	/*for(int i=0;i<100;i++){
@@ -175,7 +364,10 @@ int main(void)
 		HAL_Delay(100);
 	}*/
 	
-	
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
 	
   /* USER CODE END 2 */
 
@@ -185,19 +377,78 @@ int main(void)
   {
 		
 		if(irjflashre == 1) break;
-		HAL_Delay(100);
+//		TIM16->PSC=2000-0.415*adcValue[fotoindex];
+//		for(int i=0; i<4; i++)data_readed[indX++]=adcValue[i];
+//		HAL_Delay(200);
+	
 		
-		//ENCODER
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
+		DWT_Delay_us(1000);
+		HAL_ADC_Start(&hadc1);
+		for(int i =0;i < 5;i++){
+			HAL_ADC_PollForConversion(&hadc1,100);
+			adcValue[i] = HAL_ADC_GetValue(&hadc1);
+		}
+		HAL_ADC_Stop(&hadc1);
+		fotoValue[0]= adcValue[0];
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+		DWT_Delay_us(100000);
+		
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_SET);
+		DWT_Delay_us(1000);
+				HAL_ADC_Start(&hadc1);
+		for(int i =0;i < 5;i++){
+			HAL_ADC_PollForConversion(&hadc1,100);
+			adcValue[i] = HAL_ADC_GetValue(&hadc1);
+		}
+		HAL_ADC_Stop(&hadc1);
+		fotoValue[1]= adcValue[1]-1300;
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
+		DWT_Delay_us(100000);
+		
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_SET);
+		DWT_Delay_us(1000);
+				HAL_ADC_Start(&hadc1);
+		for(int i =0;i < 5;i++){
+			HAL_ADC_PollForConversion(&hadc1,100);
+			adcValue[i] = HAL_ADC_GetValue(&hadc1);
+		}
+		HAL_ADC_Stop(&hadc1);
+		fotoValue[2]= adcValue[2];
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_RESET);
+		DWT_Delay_us(100000);
+		
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
+		DWT_Delay_us(1000);
+		HAL_ADC_Start(&hadc1);
+		for(int i =0;i < 5;i++){
+			HAL_ADC_PollForConversion(&hadc1,100);
+			adcValue[i] = HAL_ADC_GetValue(&hadc1);
+		}
+		HAL_ADC_Stop(&hadc1);
+		fotoValue[3]= adcValue[3];
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
+		DWT_Delay_us(100000);
+		
+		for(int i =0;i<4;i++)
+			if(indX < 255) data_readed[indX++] =fotoValue[i];
+		
+		beep(500,100);
+		
+		UserButtonHandler(adcValue[4]);
+		
+		
+//		//ENCODER
 //		//if(adcValue[4] < 10) break;
 //		enc1=TIM1->CNT;
-//		//data_readed[indX++] = enc1;
+//		data_readed[indX++] = enc1;
 //		enc2=TIM2->CNT;
-//		//data_readed[indX++] = enc2;
-//		HAL_Delay(1);
+//		data_readed[indX++] = enc2;
+//		HAL_Delay(100);
 //		if(enc1 != 0 || enc2 != 0)
 //			HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET);
 		
-		//GYRO
+//		//GYRO
 //	data[0]=0x3B;
 //	HAL_I2C_Master_Transmit(&hi2c1, 0xD0, data, 1, 10);
 //	HAL_Delay(10);
@@ -206,11 +457,54 @@ int main(void)
 //		{
 //			value[i]=(buffer[2*i]<<8) + buffer[2*i+1];
 //		}
+//	value[3]=value[3]/340.00+36.53;
 //	HAL_Delay(1000);
 //	for(int  i =0; i<7;i++)
 //		data_readed[indX++] = value[i];
-		
+	
+//		//BUZZER
+//	
+//	//STAR_WARS START
+//	//Play first section
+//  firstSection();
+//  //Play second section
+//  secondSection();
+//  //Variant 1
+//  beep(f, 250);  
+//  beep(gS, 500);  
+//  beep(f, 350);  
+//  beep(a, 125);
+//  beep(cH, 500);
+//  beep(a, 375);  
+//  beep(cH, 125);
+//  beep(eH, 650);
+//  HAL_Delay(500);
+//  //Repeat second section
+//  secondSection();
+//  //Variant 2
+//  beep(f, 250);  
+//  beep(gS, 500);  
+//  beep(f, 375);  
+//  beep(cH, 125);
+//  beep(a, 500);  
+//  beep(f, 375);  
+//  beep(cH, 125);
+//  beep(a, 650);  
+//  HAL_Delay(650);
+//  //STAR_WARS END
 
+//	ok();
+//	HAL_Delay(500);
+//	ohno();
+//	HAL_Delay(500);
+//	beep1();
+//	HAL_Delay(500);
+//	beep2();
+//	HAL_Delay(500);
+//	beep3();
+//	HAL_Delay(500);
+//	beep4();
+//	HAL_Delay(500);
 		
   /* USER CODE END WHILE */
 
@@ -293,8 +587,9 @@ int main(void)
   /* Lock the Flash to disable the flash control register access (recommended
      to protect the FLASH memory against possible unwanted operation) *********/
   HAL_FLASH_Lock();
+	ok();
 }
-	HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
+	
   /* USER CODE END 3 */
 
 }
@@ -416,7 +711,7 @@ static void MX_ADC1_Init(void)
 
     /**Configure Regular Channel 
     */
-  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
@@ -438,7 +733,7 @@ static void MX_ADC1_Init(void)
 
     /**Configure Regular Channel 
     */
-  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Channel = ADC_CHANNEL_9;
   sConfig.Rank = ADC_REGULAR_RANK_3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -447,7 +742,7 @@ static void MX_ADC1_Init(void)
 
     /**Configure Regular Channel 
     */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_12;
   sConfig.Rank = ADC_REGULAR_RANK_4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -517,11 +812,11 @@ static void MX_TIM1_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 5;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 5;
   if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -547,18 +842,18 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 0;
+  htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 5;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 5;
   if (HAL_TIM_Encoder_Init(&htim2, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -667,9 +962,9 @@ static void MX_TIM16_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
 
   htim16.Instance = TIM16;
-  htim16.Init.Prescaler = 0;
+  htim16.Init.Prescaler = 1000;
   htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim16.Init.Period = 0;
+  htim16.Init.Period = 80;
   htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim16.Init.RepetitionCounter = 0;
   htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -806,7 +1101,8 @@ static uint32_t GetBank(uint32_t Addr)
   * @brief  Felismeri a gombbal lenyomott mintákat
   * @param  userButton: a gombra kötött pin ADC értéke, GND = gomb lenyomva
   */
-void UserButtonHandler(int userButton){
+void UserButtonHandler(int userButton)
+{
 	if(time - lastChangeTime > 50) //DEBOUNCE
 	{
 	if(userButton < 10 && lastState ==0){
@@ -826,18 +1122,20 @@ void UserButtonHandler(int userButton){
 		//data_readed[indX++] = 666; //DEBUG
 			switch(userButtonGesture){
 				case 2: //rövid
+					fotoindex++;
+					if(fotoindex>3)fotoindex=0;
 					break;
 				case 3: //hosszú
 					break;
 				case 6: //rövid-rövid
-					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
 					break;
 				case 7: //hosszú-rövid
 					break;
 				case 8: //rövid-hosszú
+					if(TIM16->CCR1 == 0) TIM16->CCR1 = 40;
+					else TIM16->CCR1 = 0;
 					break;
 				case 9: //hosszú-hosszú
-					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
 					break;
 				case 21: //hosszú-hosszú-hosszú
 					irjflashre = 1;
@@ -847,8 +1145,25 @@ void UserButtonHandler(int userButton){
 		userButtonCounter = 0;
 	}
 	}
-	
 }
+
+//buzzer
+/**
+  * @brief  A megadott hangon, megadott ideig sipol.
+  * @param  note: a prescaler értéke, duration: a delay ms-ban
+  */
+void beep(int note, int duration)
+{
+  //Play tone on buzzerPin
+	TIM16->CCR1 = 40;
+  TIM16->PSC=note;
+	HAL_Delay(duration);
+
+  //Stop tone on buzzerPin
+  TIM16->CCR1 = 0;
+}
+
+
 /* USER CODE END 4 */
 
 /**
