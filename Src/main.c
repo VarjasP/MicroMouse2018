@@ -42,7 +42,7 @@
 /* USER CODE BEGIN Includes */
 #include "dwt_stm32_delay.h"
 #define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_16   /* Start @ of user Flash area */
-#define FLASH_USER_END_ADDR     ADDR_FLASH_PAGE_16 + FLASH_PAGE_SIZE - 1   /* End @ of user Flash area */
+#define FLASH_USER_END_ADDR     ADDR_FLASH_PAGE_16 + FLASH_PAGE_SIZE*8 - 1   /* End @ of user Flash area */
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -62,16 +62,22 @@ int adcValue[5];
 uint32_t time=0;
 
 uint32_t indX = 0;
-int64_t data_readed[256];
+int32_t dataRead[4096];
 int enc1=0,enc2 =0;
 
 int fotoValue[4];
+int dataMeasured[40];
+int sum[4];
 
-uint8_t irjflashre = 0;
+uint8_t pressed = 0;
+uint8_t writeFlash = 0;
 uint8_t userButtonCounter = 0;
 uint32_t lastChangeTime = 0;
 uint16_t userButtonGesture = 0;
 uint8_t lastState = 0; //0 = nincs lenyomva, 1 = lenyomva
+
+int before = 0;
+int next = 0;
 
 uint32_t FirstPage = 0, NbOfPages = 0, BankNumber = 0;
 uint32_t Address = 0, PAGEError = 0, MemoryProgramStatus = 0;
@@ -105,6 +111,8 @@ int ReadFoto(int pin);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+int64_t dataFlash = 0;
+
 uint8_t data[2];
 uint8_t buffer[14];
 int16_t value[7];
@@ -345,20 +353,24 @@ int main(void)
 	//Timer interrupt
 	HAL_TIM_Base_Start_IT(&htim7);
 	//set data
-	for(int i=0;i< 256;i++){
-		data_readed[i]=0;
+	for(int i=0;i< 4096;i++){
+		dataRead[i]=0;
 	}
-		for(int i=0;i< 4;i++){
+	for(int i=0;i< 4;i++){
 		fotoValue[i]=0;
+		sum[i]=0;
+	}
+	for(int i=0;i< 40;i++){
+		dataMeasured[i]=0;
 	}
 	
-	/*data_readed[indX++] = 62;
+	/*dataRead[indX++] = 62;
 	for(int i=0;i< 256;i++){
-		if(i%2 == 0) data_readed[i]=i/2;
-		else data_readed[i] = i*501;
+		if(i%2 == 0) dataRead[i]=i/2;
+		else dataRead[i] = i*501;
 	}*/
 		/*for(int  i =0; i<400;i++)
-		data_readed[indX++] = i*1000+1;*/
+		dataRead[indX++] = i*1000+1;*/
 	/*for(int i=0;i<100;i++){
 		HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_3);
 		HAL_Delay(100);
@@ -375,75 +387,104 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		
-		if(irjflashre == 1) break;
+		if(writeFlash == 1) break;
 //		TIM16->PSC=2000-0.415*adcValue[fotoindex];
-//		for(int i=0; i<4; i++)data_readed[indX++]=adcValue[i];
+//		for(int i=0; i<4; i++)dataRead[indX++]=adcValue[i];
 //		HAL_Delay(200);
 	
+		//IRLED + FOTO
 		
-		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
-		DWT_Delay_us(1000);
+	if(next>before) {
+		for (int i=0; i<10; i++) {
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_SET);
+					DWT_Delay_us(100);
+					HAL_ADC_Start(&hadc1);
+					for(int i =0;i < 5;i++){
+						HAL_ADC_PollForConversion(&hadc1,100);
+						fotoValue[i] = HAL_ADC_GetValue(&hadc1);
+					}
+					HAL_ADC_Stop(&hadc1);
+					fotoValue[1]= fotoValue[1]-1300;
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
+					DWT_Delay_us(100000);
+					dataMeasured[i] = fotoValue[0];
+					
+					HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_SET);
+					DWT_Delay_us(100);
+							HAL_ADC_Start(&hadc1);
+					for(int i =0;i < 5;i++){
+						HAL_ADC_PollForConversion(&hadc1,100);
+						fotoValue[i] = HAL_ADC_GetValue(&hadc1);
+					}
+					HAL_ADC_Stop(&hadc1);
+					fotoValue[1]= fotoValue[1]-1300;
+					HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
+					DWT_Delay_us(100000);
+					dataMeasured[i+10] = fotoValue[1];
+			
+					HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_SET);
+					DWT_Delay_us(100);
+							HAL_ADC_Start(&hadc1);
+					for(int i =0;i < 5;i++){
+						HAL_ADC_PollForConversion(&hadc1,100);
+						fotoValue[i] = HAL_ADC_GetValue(&hadc1);
+					}
+					HAL_ADC_Stop(&hadc1);
+					fotoValue[1]= fotoValue[1]-1300;
+					HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_RESET);
+					DWT_Delay_us(100000);
+					dataMeasured[i+20] = fotoValue[2];
+					
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
+					DWT_Delay_us(100);
+					HAL_ADC_Start(&hadc1);
+					for(int i =0;i < 5;i++){
+						HAL_ADC_PollForConversion(&hadc1,100);
+						fotoValue[i] = HAL_ADC_GetValue(&hadc1);
+					}
+					HAL_ADC_Stop(&hadc1);
+					fotoValue[1]= fotoValue[1]-1300;
+					HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
+					DWT_Delay_us(100000);
+					dataMeasured[i+30] = fotoValue[3];
+		}
+		for(int i=0; i<10;i++){
+			sum[0] += dataMeasured[i];
+			sum[1] += dataMeasured[i+10];
+			sum[2] += dataMeasured[i+20];
+			sum[3] += dataMeasured[i+30];
+		}
+		for(int i =0;i<4;i++){
+			dataRead[indX++] = sum[i]/10;
+			sum[i]=0;
+		}
+		before=next;
+		beep(500, 100);
+	}
+	if(pressed == 1){
+		pressed=0;
+		beep(500, 50);
+		HAL_Delay(50);
+		beep(500, 50);
+	}
+	
+	
 		HAL_ADC_Start(&hadc1);
 		for(int i =0;i < 5;i++){
 			HAL_ADC_PollForConversion(&hadc1,100);
 			adcValue[i] = HAL_ADC_GetValue(&hadc1);
 		}
 		HAL_ADC_Stop(&hadc1);
-		fotoValue[0]= adcValue[0];
-		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_4,GPIO_PIN_RESET);
-		DWT_Delay_us(100000);
-		
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_SET);
-		DWT_Delay_us(1000);
-				HAL_ADC_Start(&hadc1);
-		for(int i =0;i < 5;i++){
-			HAL_ADC_PollForConversion(&hadc1,100);
-			adcValue[i] = HAL_ADC_GetValue(&hadc1);
-		}
-		HAL_ADC_Stop(&hadc1);
-		fotoValue[1]= adcValue[1]-1300;
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
-		DWT_Delay_us(100000);
-		
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_SET);
-		DWT_Delay_us(1000);
-				HAL_ADC_Start(&hadc1);
-		for(int i =0;i < 5;i++){
-			HAL_ADC_PollForConversion(&hadc1,100);
-			adcValue[i] = HAL_ADC_GetValue(&hadc1);
-		}
-		HAL_ADC_Stop(&hadc1);
-		fotoValue[2]= adcValue[2];
-		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_11,GPIO_PIN_RESET);
-		DWT_Delay_us(100000);
-		
-		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
-		DWT_Delay_us(1000);
-		HAL_ADC_Start(&hadc1);
-		for(int i =0;i < 5;i++){
-			HAL_ADC_PollForConversion(&hadc1,100);
-			adcValue[i] = HAL_ADC_GetValue(&hadc1);
-		}
-		HAL_ADC_Stop(&hadc1);
-		fotoValue[3]= adcValue[3];
-		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
-		DWT_Delay_us(100000);
-		
-		for(int i =0;i<4;i++)
-			if(indX < 255) data_readed[indX++] =fotoValue[i];
-		
-		beep(500,100);
-		
+		HAL_Delay(50);
 		UserButtonHandler(adcValue[4]);
 		
 		
 //		//ENCODER
 //		//if(adcValue[4] < 10) break;
 //		enc1=TIM1->CNT;
-//		data_readed[indX++] = enc1;
+//		dataRead[indX++] = enc1;
 //		enc2=TIM2->CNT;
-//		data_readed[indX++] = enc2;
+//		dataRead[indX++] = enc2;
 //		HAL_Delay(100);
 //		if(enc1 != 0 || enc2 != 0)
 //			HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,GPIO_PIN_SET);
@@ -460,7 +501,7 @@ int main(void)
 //	value[3]=value[3]/340.00+36.53;
 //	HAL_Delay(1000);
 //	for(int  i =0; i<7;i++)
-//		data_readed[indX++] = value[i];
+//		dataRead[indX++] = value[i];
 	
 //		//BUZZER
 //	
@@ -548,11 +589,7 @@ int main(void)
     /* Infinite loop */
     while (1)
     {
-      /* Make LED3 blink (100ms on, 2s off) to indicate error in Erase operation */
-      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
-      HAL_Delay(100);
-      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
-      HAL_Delay(2000);
+      //TODO: hiba visszajelzés buzzeren
     }
   }
 	/* Program the user Flash area word by word
@@ -561,13 +598,14 @@ int main(void)
   Address = FLASH_USER_START_ADDR;
 
 	indX = 0;
-  while (Address < FLASH_USER_END_ADDR && indX < 256)
+  while (Address < FLASH_USER_END_ADDR && indX < 4096)
   {
-		//uint64_t data = (data_readed[indX+3]<<48) + (data_readed[indX+2]<<32) + (data_readed[indX+1]<<16) + data_readed[indX];
-    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, Address, data_readed[indX]) == HAL_OK)
+		if (dataRead[indX+1] < 0) dataFlash = ((int64_t)dataRead[indX+1] + 1<<32) + (int64_t)dataRead[indX];
+		else dataFlash = ((int64_t)dataRead[indX+1]<<32) + (int64_t)dataRead[indX];
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, Address, dataFlash) == HAL_OK)
     {
       Address = Address + 8;
-			indX = indX + 1;
+			indX = indX + 2;
     }
    else
     {
@@ -575,11 +613,7 @@ int main(void)
          User can add here some code to deal with this error */
       while (1)
       {
-        /* Make LED3 blink (500ms on, 1s off) to indicate error in Write operation */
-			HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_SET);
-      HAL_Delay(500);
-      HAL_GPIO_WritePin(GPIOB,GPIO_PIN_3,GPIO_PIN_RESET);
-      HAL_Delay(1000);
+			//TODO: hiba visszajelzés buzzeren
       }
     }
   }
@@ -1112,20 +1146,24 @@ void UserButtonHandler(int userButton)
 		
 	else if(userButton > 500 && lastState ==1){
 		lastState = 0;
-		//data_readed[indX++] = time - lastChangeTime; //DEBUG
+		//dataRead[indX++] = time - lastChangeTime; //DEBUG
 		if(time - lastChangeTime < 500) userButtonGesture += 2* (1 << userButtonCounter++); //rövid
 		else if(time - lastChangeTime >= 500) userButtonGesture += 3* (1 << userButtonCounter++); //hosszú
 		lastChangeTime = time;
 	}
 	
 	else if (userButtonGesture != 0 && userButton > 500 && time - lastChangeTime > 1000){
-		//data_readed[indX++] = 666; //DEBUG
+		//dataRead[indX++] = 666; //DEBUG
 			switch(userButtonGesture){
 				case 2: //rövid
-					fotoindex++;
-					if(fotoindex>3)fotoindex=0;
+//					fotoindex++;
+//					if(fotoindex>3)fotoindex=0;
+					next++;
 					break;
 				case 3: //hosszú
+					pressed = 1;
+					fotoindex++;
+					if(fotoindex>3)fotoindex=0;
 					break;
 				case 6: //rövid-rövid
 					break;
@@ -1138,7 +1176,7 @@ void UserButtonHandler(int userButton)
 				case 9: //hosszú-hosszú
 					break;
 				case 21: //hosszú-hosszú-hosszú
-					irjflashre = 1;
+					writeFlash = 1;
 					break;
 			}
 		userButtonGesture = 0;

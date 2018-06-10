@@ -190,7 +190,7 @@ void TIM7_IRQHandler(void)
 	++time;
 	
 	//READ ADC
-	readADC(&hadc1,adcValue,5);
+	//readADC(&hadc1,adcValue,5);
 	
 	//UserButtonHandler(adcValue[4]);
 	
